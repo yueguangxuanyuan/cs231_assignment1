@@ -74,7 +74,10 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    #pass
+    hidden1_input = X.dot(W1)+b1;
+    hidden1_output = np.maximum(0,hidden1_input);#神经元的激发函数
+    scores = hidden1_output.dot(W2)+b2;
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -92,7 +95,13 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    pass
+    #pass
+    max_scores = np.max(scores,axis=1 , keepdims=True);
+    exp_scores = np.exp(scores-max_scores);
+    row_sum_exp_scores = np.sum(exp_scores,axis = 1,keepdims=True);
+ 
+    loss = (-(scores[range(N), y] - max_scores).sum() + np.log(exp_scores.sum(axis = 1)).sum())/N + 0.5*reg*(np.sum(W1*W1)+np.sum(W2*W2));
+    
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -104,7 +113,26 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+    #pass
+    norm_exp_scores_W2 = exp_scores / row_sum_exp_scores;
+    norm_exp_scores_W2[range(N),y] -= 1;
+    
+    dW2 = hidden1_output.T.dot(norm_exp_scores_W2)/N + reg * W2;
+    grads['W2'] = dW2;
+    grads['b2'] = np.sum(norm_exp_scores_W2,axis=0)/N
+    
+    #反向传递到 hidden1的输出
+    d_hidden1_output = norm_exp_scores_W2.dot(W2.T);
+    
+    #反向传播到hidden1的输入  考虑激发函数的反向传播
+    hidden1_input[hidden1_input> 0] = 1;
+    hidden1_input[hidden1_input< 0] = 0;
+    d_hidden1_input = d_hidden1_output * hidden1_input;
+    
+    #反向传播到W1
+    dW1 = X.T.dot(d_hidden1_input) + reg*W1;
+    grads['W1'] = dW1;
+    grads['b1'] = np.sum(d_hidden1_input,axis=0);
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -140,7 +168,7 @@ class TwoLayerNet(object):
     train_acc_history = []
     val_acc_history = []
 
-    for it in xrange(num_iters):
+    for it in range(num_iters):
       X_batch = None
       y_batch = None
 
@@ -148,7 +176,10 @@ class TwoLayerNet(object):
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
-      pass
+      #pass
+      masks = np.random.choice(num_train,batch_size);
+      X_batch = X[masks, :];
+      y_batch = y[masks];
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -163,13 +194,17 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
-      pass
+      #pass
+      self.params['W1'] -= learning_rate*grads['W1']
+      self.params['b1'] -= learning_rate*grads['b1']
+      self.params['W2'] -= learning_rate*grads['W2']
+      self.params['b2'] -= learning_rate*grads['b2']
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
 
       if verbose and it % 100 == 0:
-        print 'iteration %d / %d: loss %f' % (it, num_iters, loss)
+        print ('iteration %d / %d: loss %f' % (it, num_iters, loss))
 
       # Every epoch, check train and val accuracy and decay learning rate.
       if it % iterations_per_epoch == 0:
@@ -208,7 +243,15 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
-    pass
+    #pass
+    W1, b1 = self.params['W1'], self.params['b1']
+    W2, b2 = self.params['W2'], self.params['b2']
+    scores = None
+    hidden1_input = X.dot(W1)+b1;
+    hidden1_output = np.maximum(0,hidden1_input);#神经元的激发函数
+    scores = hidden1_output.dot(W2)+b2;
+    
+    y_pred = np.argmax(scores,axis=1);
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################
